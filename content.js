@@ -1,15 +1,22 @@
+// content.js
 
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-    console.log('Content Script Received Message:', request);
-
-    if (request.action === 'detectCyberbullying') {
-        var allText = document.body.innerText;
-        console.log('All Text on the Page:', allText);
-
-        var selectedText = window.getSelection().toString();
-        console.log('Selected Text:', selectedText);
-
-        // Send the selected text to your Streamlit app for classification
-        chrome.runtime.sendMessage({ action: 'classifyText', text: selectedText });
-    }
+document.addEventListener("mouseup", function() {
+  var selectedText = window.getSelection().toString().trim();
+  if (selectedText !== "") {
+    fetch('http://your-streamlit-app-url/highlighted_text', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ selected_text: selectedText }),
+    })
+    .then(response => response.json())
+    .then(data => {
+      // Process the response from the Streamlit app
+      console.log('Binary Result:', data.binary_result);
+      console.log('Multi-Class Result:', data.multi_class_result);
+      // Display or use the results as needed
+    })
+    .catch(error => console.error('Error:', error));
+  }
 });

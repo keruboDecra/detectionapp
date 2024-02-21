@@ -26,6 +26,49 @@ label_encoder = joblib.load('label_encoder.joblib')
 
 # Load the logo image
 logo = Image.open('logo.png')
+import streamlit as st
+import tornado.web
+from tornado.wsgi import WSGIContainer
+from tornado.ioloop import IOLoop
+
+# ... (existing code)
+
+# Create a new Tornado handler for the highlighted text endpoint
+class HighlightedTextHandler(tornado.web.RequestHandler):
+    def post(self):
+        try:
+            data = tornado.escape.json_decode(self.request.body)
+            selected_text = data.get('selected_text', '')
+
+            if selected_text:
+                # Perform classification using your existing functions
+                binary_result, _ = binary_cyberbullying_detection(selected_text)
+                multi_class_result = multi_class_cyberbullying_detection(selected_text)
+
+                # Return the classification results as JSON
+                self.write({
+                    'binary_result': binary_result,
+                    'multi_class_result': multi_class_result[0]
+                })
+            else:
+                self.write({'error': 'No selected text received'})
+
+        except Exception as e:
+            st.error(f"Error in HighlightedTextHandler: {e}")
+            self.write({'error': 'Internal server error'})
+
+# Create a new Tornado application and add the handler
+tornado_app = tornado.web.Application([
+    ('/highlighted_text', HighlightedTextHandler),
+])
+
+# ... (existing code)
+
+# Set up the Tornado server
+st.server.add_tornado_route(r'/highlighted_text', tornado_app)
+
+# ... (existing code)
+
 
 # Function to clean and preprocess text
 def preprocess_text(text):
@@ -423,7 +466,8 @@ def classify_highlighted_text():
         st.write(f"Binary Cyberbullying Prediction: {'Cyberbullying' if binary_result == 1 else 'Not Cyberbullying'}")
         st.write(f"Multi-Class Predicted Class: {multi_class_result[0]}")
 
+
+
 # Check if the app is being used by the Chrome extension
 if 'selected_text' in st.session_state:
     receive_highlighted_text()
-

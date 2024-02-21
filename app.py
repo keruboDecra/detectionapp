@@ -425,7 +425,5 @@ def classify_highlighted_text():
 
 # Check if the app is being used by the Chrome extension
 if 'selected_text' in st.session_state:
-    classify_highlighted_text()
-
-
+    receive_highlighted_text()
 

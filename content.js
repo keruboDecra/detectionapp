@@ -3,7 +3,7 @@
 document.addEventListener("mouseup", function() {
   var selectedText = window.getSelection().toString().trim();
   if (selectedText !== "") {
-    fetch('http://your-streamlit-app-url/highlighted_text', {
+    fetch('https://f8zwx9odu94zinata9n8ws.streamlit.app/', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

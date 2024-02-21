@@ -383,7 +383,28 @@ if page == "Twitter Interaction":
     twitter_interaction_page()
 elif page == "Custom Twitter Interaction":
     custom_twitter_interaction_page()
+@st.route('/highlighted_text', methods=['POST'])
+def receive_highlighted_text():
+    try:
+        data = st.json(request.get_json())
+        selected_text = data.get('selected_text', '')
 
+        if selected_text:
+            # Perform classification using your existing functions
+            binary_result, _ = binary_cyberbullying_detection(selected_text)
+            multi_class_result = multi_class_cyberbullying_detection(selected_text)
+
+            # Return the classification results as JSON
+            return st.jsonify({
+                'binary_result': binary_result,
+                'multi_class_result': multi_class_result[0]
+            })
+        else:
+            return st.jsonify({'error': 'No selected text received'})
+
+    except Exception as e:
+        st.error(f"Error in receive_highlighted_text: {e}")
+        return st.jsonify({'error': 'Internal server error'})
 def classify_highlighted_text():
     st.title('Cyberbullying Detection App')
 

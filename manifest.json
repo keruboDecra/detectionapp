@@ -2,14 +2,9 @@
   "manifest_version": 3,
   "name": "Cyberbullying Detector",
   "version": "1.0",
-  "description": "Detect and classify cyberbullying in highlighted text.",
-  "icons": {
-    "48": "logo.png"
-  },
-  "permissions": ["activeTab", "storage"],
-  "action": {
-    "default_icon": "logo.png",
-    "default_popup": "popup.html"
+  "permissions": ["activeTab", "storage", "contextMenus"],
+  "background": {
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
@@ -17,7 +12,11 @@
       "js": ["content.js"]
     }
   ],
-  "externally_connectable": {
-    "matches": ["<all_urls>"]
+  "icons": {
+    "48": "icon.png"
+  },
+  "action": {
+    "default_icon": "icon.png",
+    "default_popup": "popup.html"
   }
 }

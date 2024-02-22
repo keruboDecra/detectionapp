@@ -2,7 +2,7 @@ import re
 import nltk
 nltk.download('stopwords')
 nltk.download('wordnet')
-
+from PIL import Image
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
 import numpy as np

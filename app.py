@@ -1,4 +1,3 @@
-from PIL import Image
 import re
 import nltk
 nltk.download('stopwords')
@@ -17,12 +16,6 @@ label_encoder = joblib.load('label_encoder.joblib')
 
 # Load the logo image
 logo = Image.open('logo.png')
-
-# Global variables
-session_state = {
-    'user_input': '',
-    'chrome_extension_message': None
-}
 
 # Function to clean and preprocess text
 def preprocess_text(text):

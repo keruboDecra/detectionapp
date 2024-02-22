@@ -1,6 +1,6 @@
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
   // Send the selected text to your server for processing
-  fetch('https://your-server-endpoint', {
+  fetch('https://f8zwx9odu94zinata9n8ws.streamlit.app/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

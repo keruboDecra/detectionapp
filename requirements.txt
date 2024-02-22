@@ -10,4 +10,4 @@ scipy
 threadpoolctl
 google-trans-new
 tweepy==3.10.0
-
+tornado

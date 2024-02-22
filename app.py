@@ -1,25 +1,15 @@
-
-import streamlit as st
-import re
-import joblib
-import numpy as np
-import pandas as pd
-import nltk
 from PIL import Image
-import sys  # Import the sys module
-# Download NLTK resources
-nltk.download('wordnet')
+import re
+import nltk
 nltk.download('stopwords')
-from sklearn.base import clone
+nltk.download('wordnet')
+
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer
-from sklearn.feature_extraction.text import TfidfVectorizer
-import tornado.ioloop
-
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
+import numpy as np
+import joblib
+import streamlit as st
 model_pipeline = joblib.load('sgd_classifier_model.joblib')
-new_model_pipeline = None
 
 # Load the SGD classifier, TF-IDF vectorizer, and label encoder
 sgd_classifier = joblib.load('sgd_classifier_model.joblib')
@@ -27,16 +17,12 @@ label_encoder = joblib.load('label_encoder.joblib')
 
 # Load the logo image
 logo = Image.open('logo.png')
-import streamlit as st
-import tornado.web
-from tornado.wsgi import WSGIContainer
-from tornado.ioloop import IOLoop
 
-import streamlit as st
-import tornado.web
-import tornado.ioloop
-from tornado.wsgi import WSGIContainer
-
+# Global variables
+session_state = {
+    'user_input': '',
+    'chrome_extension_message': None
+}
 
 # Function to clean and preprocess text
 def preprocess_text(text):
@@ -46,8 +32,6 @@ def preprocess_text(text):
     lemmatizer = WordNetLemmatizer()
     tokens = [lemmatizer.lemmatize(word) for word in text.split() if word not in stop_words]
     return ' '.join(tokens)
-
-
 
 # Function for binary cyberbullying detection
 def binary_cyberbullying_detection(text):
@@ -89,58 +73,64 @@ def multi_class_cyberbullying_detection(text):
         st.error(f"Error in multi_class_cyberbullying_detection: {e}")
         return None
 
-# Create a new Tornado handler for the highlighted text endpoint
-class HighlightedTextHandler(tornado.web.RequestHandler):
-    def post(self):
-        try:
-            data = tornado.escape.json_decode(self.request.body)
-            selected_text = data.get('selected_text', '')
+def detect():
+    st.title('Cyberbullying Detection App')
 
-            if selected_text:
-                # Perform classification using your existing functions
-                binary_result, _ = binary_cyberbullying_detection(selected_text)
-                multi_class_result = multi_class_cyberbullying_detection(selected_text)
+    # Input text box
+    user_input = st.text_area("Share your thoughts:", "", key="user_input")
 
-                # Return the classification results as JSON
-                self.write({
-                    'binary_result': binary_result,
-                    'multi_class_result': multi_class_result[0]
-                })
+    # Make binary prediction and check for offensive words
+    binary_result, offensive_words = binary_cyberbullying_detection(user_input)
+
+    # View flag for detailed predictions
+    view_flagging_reasons = binary_result == 1
+    view_predictions = st.checkbox("View Flagging Reasons", value=view_flagging_reasons)
+
+    # Check if the user has entered any text
+    if user_input:
+        st.markdown("<div class='st-bw'>", unsafe_allow_html=True)
+
+        # Display binary prediction only if "View Flagging Reasons" is checked
+        if view_predictions and binary_result == 1:
+            st.write(f"Binary Cyberbullying Prediction: {'Cyberbullying' if binary_result == 1 else 'Not Cyberbullying'}")
+
+        # Check for offensive words and display warning
+        if offensive_words and (view_predictions or binary_result == 0):
+            # Adjust the warning message based on cyberbullying classification
+            if binary_result == 1:
+                st.warning(f"This text contains offensive language. Consider editing. Detected offensive words: {offensive_words}")
             else:
-                self.write({'error': 'No selected text received'})
+                st.warning(f"While this text is not necessarily cyberbullying, it may contain offensive language. Consider editing. Detected offensive words: {offensive_words}")
 
-        except Exception as e:
-            st.error(f"Error in HighlightedTextHandler: {e}")
-            self.write({'error': 'Internal server error'})
+        st.markdown("</div>", unsafe_allow_html=True)
 
-# Create a new Tornado application and add the handler
-tornado_app = tornado.web.Application([
-    ('/highlighted_text', HighlightedTextHandler),
-])
+        # Make multi-class prediction
+        multi_class_result = multi_class_cyberbullying_detection(user_input)
+        if multi_class_result is not None:
+            predicted_class, prediction_probs = multi_class_result
+            st.markdown("<div class='st-eb'>", unsafe_allow_html=True)
 
-# Set up the Tornado server
-tornado_server = tornado.httpserver.HTTPServer(tornado_app)
-tornado_server.listen(8888)  # You can choose a different port
+            if view_predictions:
+                st.write(f"Multi-Class Predicted Class: {predicted_class}")
 
-# ... (existing code)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-# Check if the app is being used by the Chrome extension
-if 'selected_text' in st.session_state:
-    receive_highlighted_text()
+            # Check if classified as cyberbullying
+            if predicted_class != 'not_cyberbullying':
+                st.error(f"Please edit your text before resending. Your text contains content that may appear as bullying to other users' {predicted_class.replace('_', ' ').title()}.")
+            elif offensive_words and not view_predictions:
+                st.warning("While this text is not necessarily cyberbullying, it may contain offensive language. Consider editing.")
+            else:
+                # Display message before sending
+                st.success('This text is safe to send.')
+def main():
+    st.set_page_config(
+        page_title="Cyberbullying Detection App",
+        page_icon=logo,
+        layout="centered"
+    )
 
-# ... (existing code)
+    detect()
 
-# Start the Tornado server along with the Streamlit app
-st.title('Cyberbullying Detection App')
-st.write("Streamlit content goes here")
-
-# Start the Tornado server in a separate thread
-tornado_thread = threading.Thread(target=tornado.ioloop.IOLoop.current().start)
-tornado_thread.start()
-
-# Start the Streamlit app
-st.run()
-
-
-
-
+if __name__ == "__main__":
+    main()

@@ -13,7 +13,7 @@ document.addEventListener('DOMContentLoaded', function () {
           selectedText = response.selectedText;
 
           // Send the selected text to your server for processing
-          fetch('https://f8zwx9odu94zinata9n8ws.streamlit.app/', {
+          fetch('https://f8zwx9odu94zinata9n8ws.streamlit.app/process_text', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

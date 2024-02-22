@@ -1,22 +1,16 @@
-// content.js
-
-document.addEventListener("mouseup", function() {
-  var selectedText = window.getSelection().toString().trim();
-  if (selectedText !== "") {
-    fetch('https://f8zwx9odu94zinata9n8ws.streamlit.app/', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ selected_text: selectedText }),
-    })
+chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
+  // Send the selected text to your server for processing
+  fetch('https://your-server-endpoint', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ text: request.text }),
+  })
     .then(response => response.json())
     .then(data => {
-      // Process the response from the Streamlit app
-      console.log('Binary Result:', data.binary_result);
-      console.log('Multi-Class Result:', data.multi_class_result);
-      // Display or use the results as needed
+      // Handle the response from your server (display in popup.html)
+      chrome.runtime.sendMessage({ result: data });
     })
     .catch(error => console.error('Error:', error));
-  }
 });

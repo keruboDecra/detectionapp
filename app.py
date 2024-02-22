@@ -6,13 +6,10 @@ from PIL import Image
 import re
 import nltk
 import joblib
-import streamlit as st
 
 # Load the SGD classifier, TF-IDF vectorizer, and label encoder
 sgd_classifier = joblib.load('sgd_classifier_model.joblib')
 label_encoder = joblib.load('label_encoder.joblib')
-
-# ... (other imports and configurations)
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -43,7 +40,6 @@ def binary_cyberbullying_detection(text):
 
         return prediction[0], offending_words
     except Exception as e:
-        st.error(f"Error in binary_cyberbullying_detection: {e}")
         return None, None
 
 # Function for multi-class cyberbullying detection
@@ -63,7 +59,6 @@ def multi_class_cyberbullying_detection(text):
 
         return predicted_class_label, decision_function_values
     except Exception as e:
-        st.error(f"Error in multi_class_cyberbullying_detection: {e}")
         return None
 
 @app.route('/')
@@ -83,6 +78,22 @@ def handle_text_from_extension(data):
     }
 
     emit('result_to_extension', result_data)
+
+# Expose an endpoint for your extension to send data
+@app.route('/process_text', methods=['POST'])
+def process_text():
+    data = request.get_json()
+    text = data.get('text', '')
+    binary_result, offensive_words = binary_cyberbullying_detection(text)
+    multi_class_result = multi_class_cyberbullying_detection(text)
+
+    result_data = {
+        'binary_result': binary_result,
+        'offensive_words': offensive_words,
+        'multi_class_result': multi_class_result
+    }
+
+    return jsonify(result_data)
 
 if __name__ == '__main__':
     socketio.run(app, debug=True)

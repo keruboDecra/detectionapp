@@ -1,35 +1,28 @@
+# app.py
+
+from flask import Flask, render_template, request, jsonify
+from flask_socketio import SocketIO, emit
 from PIL import Image
 import re
 import nltk
-nltk.download('stopwords')
-nltk.download('wordnet')
-
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-import numpy as np
 import joblib
 import streamlit as st
-model_pipeline = joblib.load('sgd_classifier_model.joblib')
 
 # Load the SGD classifier, TF-IDF vectorizer, and label encoder
 sgd_classifier = joblib.load('sgd_classifier_model.joblib')
 label_encoder = joblib.load('label_encoder.joblib')
 
-# Load the logo image
-logo = Image.open('logo.png')
+# ... (other imports and configurations)
 
-# Global variables
-session_state = {
-    'user_input': '',
-    'chrome_extension_message': None
-}
+app = Flask(__name__)
+socketio = SocketIO(app)
 
 # Function to clean and preprocess text
 def preprocess_text(text):
     text = re.sub(r'http\S+|www\S+|@\S+|#\S+|[^A-Za-z\s]', '', text)
     text = text.lower()
-    stop_words = set(stopwords.words('english'))
-    lemmatizer = WordNetLemmatizer()
+    stop_words = set(nltk.corpus.stopwords.words('english'))
+    lemmatizer = nltk.stem.WordNetLemmatizer()
     tokens = [lemmatizer.lemmatize(word) for word in text.split() if word not in stop_words]
     return ' '.join(tokens)
 
@@ -40,7 +33,7 @@ def binary_cyberbullying_detection(text):
         preprocessed_text = preprocess_text(text)
 
         # Make prediction using the loaded pipeline
-        prediction = model_pipeline.predict([preprocessed_text])
+        prediction = sgd_classifier.predict([preprocessed_text])
 
         # Check for offensive words
         with open('en.txt', 'r') as f:
@@ -73,64 +66,23 @@ def multi_class_cyberbullying_detection(text):
         st.error(f"Error in multi_class_cyberbullying_detection: {e}")
         return None
 
-def detect():
-    st.title('Cyberbullying Detection App')
+@app.route('/')
+def index():
+    return render_template('index.html')
 
-    # Input text box
-    user_input = st.text_area("Share your thoughts:", "", key="user_input")
+@socketio.on('text_from_extension')
+def handle_text_from_extension(data):
+    text = data.get('text', '')
+    binary_result, offensive_words = binary_cyberbullying_detection(text)
+    multi_class_result = multi_class_cyberbullying_detection(text)
 
-    # Make binary prediction and check for offensive words
-    binary_result, offensive_words = binary_cyberbullying_detection(user_input)
+    result_data = {
+        'binary_result': binary_result,
+        'offensive_words': offensive_words,
+        'multi_class_result': multi_class_result
+    }
 
-    # View flag for detailed predictions
-    view_flagging_reasons = binary_result == 1
-    view_predictions = st.checkbox("View Flagging Reasons", value=view_flagging_reasons)
+    emit('result_to_extension', result_data)
 
-    # Check if the user has entered any text
-    if user_input:
-        st.markdown("<div class='st-bw'>", unsafe_allow_html=True)
-
-        # Display binary prediction only if "View Flagging Reasons" is checked
-        if view_predictions and binary_result == 1:
-            st.write(f"Binary Cyberbullying Prediction: {'Cyberbullying' if binary_result == 1 else 'Not Cyberbullying'}")
-
-        # Check for offensive words and display warning
-        if offensive_words and (view_predictions or binary_result == 0):
-            # Adjust the warning message based on cyberbullying classification
-            if binary_result == 1:
-                st.warning(f"This text contains offensive language. Consider editing. Detected offensive words: {offensive_words}")
-            else:
-                st.warning(f"While this text is not necessarily cyberbullying, it may contain offensive language. Consider editing. Detected offensive words: {offensive_words}")
-
-        st.markdown("</div>", unsafe_allow_html=True)
-
-        # Make multi-class prediction
-        multi_class_result = multi_class_cyberbullying_detection(user_input)
-        if multi_class_result is not None:
-            predicted_class, prediction_probs = multi_class_result
-            st.markdown("<div class='st-eb'>", unsafe_allow_html=True)
-
-            if view_predictions:
-                st.write(f"Multi-Class Predicted Class: {predicted_class}")
-
-            st.markdown("</div>", unsafe_allow_html=True)
-
-            # Check if classified as cyberbullying
-            if predicted_class != 'not_cyberbullying':
-                st.error(f"Please edit your text before resending. Your text contains content that may appear as bullying to other users' {predicted_class.replace('_', ' ').title()}.")
-            elif offensive_words and not view_predictions:
-                st.warning("While this text is not necessarily cyberbullying, it may contain offensive language. Consider editing.")
-            else:
-                # Display message before sending
-                st.success('This text is safe to send.')
-def main():
-    st.set_page_config(
-        page_title="Cyberbullying Detection App",
-        page_icon=logo,
-        layout="centered"
-    )
-
-    detect()
-
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    socketio.run(app, debug=True)
